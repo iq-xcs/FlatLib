@@ -1,15 +1,33 @@
 -- ══════════════════════════════════════════════════════════════
---  FlatLib v4.2  |  2018 flat style  |  Roblox Executor UI Lib
+--  FlatLib v4.3  |  2018 flat style  |  Roblox Executor UI Lib
 --  Оригинальная база + расширенная кастомизация
 -- ══════════════════════════════════════════════════════════════
 
 local FlatLib = {}
 
+-- ждём загрузки игры
+if not game:IsLoaded() then game.Loaded:Wait() end
+
 local UserInputService = game:GetService("UserInputService")
 local Players          = game:GetService("Players")
 local TweenService     = game:GetService("TweenService")
+local CoreGui          = game:GetService("CoreGui")
 local lp               = Players.LocalPlayer
-local pg               = lp:WaitForChild("PlayerGui")
+
+-- ждём персонажа если его ещё нет
+if not lp.Character then lp.CharacterAdded:Wait() end
+
+-- родитель для GUI: gethui() → CoreGui → PlayerGui
+local function getGuiParent()
+    if typeof(gethui) == "function" then
+        local ok, h = pcall(gethui)
+        if ok and h then return h end
+    end
+    local ok2, cg = pcall(function() return CoreGui end)
+    if ok2 and cg then return cg end
+    return lp:WaitForChild("PlayerGui")
+end
+local pg = getGuiParent()
 
 -- ══════════════════════════════════════════════════
 --  ТЕМЫ
@@ -1073,9 +1091,16 @@ function FlatLib.Window(title)
     self._tabs={}; self._tabList={}; self._active=nil; self._visible=true
 
     self._sg = new("ScreenGui",{
-        Name="FlatLib_"..title, ResetOnSpawn=false,
-        ZIndexBehavior=Enum.ZIndexBehavior.Sibling,
+        Name         = "FlatLib_"..title,
+        ResetOnSpawn = false,
+        Enabled      = true,
+        DisplayOrder = 999,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     }, pg)
+
+    -- удалить старый экземпляр если уже существует
+    local existing = pg:FindFirstChild("FlatLib_"..title)
+    if existing and existing ~= self._sg then existing:Destroy() end
 
     local win = new("Frame",{
         Size=UDim2.new(0,px(252),0,px(350)),
