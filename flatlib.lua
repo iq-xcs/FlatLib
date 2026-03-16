@@ -1,115 +1,194 @@
 -- ══════════════════════════════════════════════════════════════
---  FlatLib v4  |  2018 flat style  |  Roblox Executor UI Lib
+--  FlatLib v4.1  |  2018 flat style  |  Roblox Executor UI Lib
 --  Темы, масштаб и ресайз работают через реестр объектов
+--  + PlayerList (teleport / spectate / fling)
 -- ══════════════════════════════════════════════════════════════
 
 local FlatLib = {}
 
 local UserInputService = game:GetService("UserInputService")
 local Players          = game:GetService("Players")
+local RunService       = game:GetService("RunService")
+local TweenService     = game:GetService("TweenService")
 local lp               = Players.LocalPlayer
 local pg               = lp:WaitForChild("PlayerGui")
 
 -- ══════════════════════════════════════════════════
---  ТЕМЫ
+--  ТЕМЫ (исправленные + новые)
 -- ══════════════════════════════════════════════════
 
 FlatLib.Themes = {
+
+    -- ── Dark (пересмотрен: более контрастный акцент) ──
     Dark = {
-        bg        = Color3.fromRGB(28,  28,  28),
-        header    = Color3.fromRGB(45,  45,  45),
-        tabBar    = Color3.fromRGB(33,  33,  33),
-        tabOn     = Color3.fromRGB(52,  52,  52),
-        tabOff    = Color3.fromRGB(33,  33,  33),
-        row       = Color3.fromRGB(36,  36,  36),
-        rowHov    = Color3.fromRGB(48,  48,  48),
-        border    = Color3.fromRGB(62,  62,  62),
-        sep       = Color3.fromRGB(50,  50,  50),
-        text      = Color3.fromRGB(215, 215, 215),
-        dim       = Color3.fromRGB(115, 115, 115),
-        on        = Color3.fromRGB(78,  170, 78),
-        onBg      = Color3.fromRGB(28,  65,  28),
-        off       = Color3.fromRGB(170, 52,  52),
-        offBg     = Color3.fromRGB(64,  20,  20),
-        accent    = Color3.fromRGB(190, 150, 50),
-        input     = Color3.fromRGB(20,  20,  20),
-        inputBord = Color3.fromRGB(65,  65,  65),
-        scroll    = Color3.fromRGB(70,  70,  70),
-        catBg     = Color3.fromRGB(22,  22,  22),
-        catText   = Color3.fromRGB(105, 105, 105),
+        bg        = Color3.fromRGB(22,  22,  24),
+        header    = Color3.fromRGB(38,  38,  42),
+        tabBar    = Color3.fromRGB(28,  28,  32),
+        tabOn     = Color3.fromRGB(46,  46,  52),
+        tabOff    = Color3.fromRGB(28,  28,  32),
+        row       = Color3.fromRGB(30,  30,  34),
+        rowHov    = Color3.fromRGB(44,  44,  50),
+        border    = Color3.fromRGB(58,  58,  66),
+        sep       = Color3.fromRGB(42,  42,  48),
+        text      = Color3.fromRGB(222, 222, 228),
+        dim       = Color3.fromRGB(110, 110, 122),
+        on        = Color3.fromRGB(88,  200, 88),
+        onBg      = Color3.fromRGB(24,  60,  24),
+        off       = Color3.fromRGB(200, 60,  60),
+        offBg     = Color3.fromRGB(62,  18,  18),
+        accent    = Color3.fromRGB(220, 170, 40),   -- золото
+        input     = Color3.fromRGB(16,  16,  18),
+        inputBord = Color3.fromRGB(60,  60,  68),
+        scroll    = Color3.fromRGB(72,  72,  82),
+        catBg     = Color3.fromRGB(18,  18,  20),
+        catText   = Color3.fromRGB(100, 100, 115),
+        btnPrim   = Color3.fromRGB(55,  120, 200),  -- синяя кнопка (телепорт)
+        btnWarn   = Color3.fromRGB(200, 140, 30),   -- жёлтая (слежка)
+        btnDang   = Color3.fromRGB(185, 48,  48),   -- красная (fling)
     },
+
+    -- ── Light (чище, меньше серости) ──
     Light = {
-        bg        = Color3.fromRGB(238, 238, 238),
-        header    = Color3.fromRGB(210, 210, 210),
-        tabBar    = Color3.fromRGB(220, 220, 220),
-        tabOn     = Color3.fromRGB(248, 248, 248),
-        tabOff    = Color3.fromRGB(220, 220, 220),
-        row       = Color3.fromRGB(245, 245, 245),
-        rowHov    = Color3.fromRGB(228, 228, 228),
-        border    = Color3.fromRGB(185, 185, 185),
-        sep       = Color3.fromRGB(200, 200, 200),
-        text      = Color3.fromRGB(30,  30,  30),
-        dim       = Color3.fromRGB(120, 120, 120),
-        on        = Color3.fromRGB(35,  140, 35),
-        onBg      = Color3.fromRGB(195, 235, 195),
-        off       = Color3.fromRGB(180, 40,  40),
-        offBg     = Color3.fromRGB(245, 200, 200),
-        accent    = Color3.fromRGB(155, 108, 18),
+        bg        = Color3.fromRGB(242, 242, 245),
+        header    = Color3.fromRGB(215, 215, 220),
+        tabBar    = Color3.fromRGB(225, 225, 230),
+        tabOn     = Color3.fromRGB(250, 250, 254),
+        tabOff    = Color3.fromRGB(225, 225, 230),
+        row       = Color3.fromRGB(248, 248, 252),
+        rowHov    = Color3.fromRGB(230, 230, 238),
+        border    = Color3.fromRGB(190, 190, 200),
+        sep       = Color3.fromRGB(210, 210, 218),
+        text      = Color3.fromRGB(22,  22,  28),
+        dim       = Color3.fromRGB(118, 118, 130),
+        on        = Color3.fromRGB(28,  140, 40),
+        onBg      = Color3.fromRGB(195, 240, 200),
+        off       = Color3.fromRGB(185, 38,  38),
+        offBg     = Color3.fromRGB(248, 200, 200),
+        accent    = Color3.fromRGB(168, 110, 10),
         input     = Color3.fromRGB(255, 255, 255),
-        inputBord = Color3.fromRGB(175, 175, 175),
-        scroll    = Color3.fromRGB(155, 155, 155),
-        catBg     = Color3.fromRGB(215, 215, 215),
-        catText   = Color3.fromRGB(95,  95,  95),
+        inputBord = Color3.fromRGB(180, 180, 192),
+        scroll    = Color3.fromRGB(158, 158, 172),
+        catBg     = Color3.fromRGB(218, 218, 224),
+        catText   = Color3.fromRGB(90,  90,  105),
+        btnPrim   = Color3.fromRGB(40,  100, 190),
+        btnWarn   = Color3.fromRGB(185, 125, 18),
+        btnDang   = Color3.fromRGB(178, 38,  38),
     },
+
+    -- ── Midnight (глубокий синий, неоновые акценты) ──
     Midnight = {
-        bg        = Color3.fromRGB(12,  12,  22),
-        header    = Color3.fromRGB(20,  20,  40),
-        tabBar    = Color3.fromRGB(15,  15,  30),
-        tabOn     = Color3.fromRGB(26,  26,  50),
-        tabOff    = Color3.fromRGB(15,  15,  30),
-        row       = Color3.fromRGB(17,  17,  34),
-        rowHov    = Color3.fromRGB(25,  25,  48),
-        border    = Color3.fromRGB(44,  44,  80),
-        sep       = Color3.fromRGB(32,  32,  60),
-        text      = Color3.fromRGB(200, 200, 235),
-        dim       = Color3.fromRGB(85,  85,  130),
-        on        = Color3.fromRGB(80,  180, 255),
-        onBg      = Color3.fromRGB(18,  52,  90),
-        off       = Color3.fromRGB(180, 60,  100),
-        offBg     = Color3.fromRGB(58,  18,  34),
-        accent    = Color3.fromRGB(140, 100, 255),
-        input     = Color3.fromRGB(10,  10,  20),
-        inputBord = Color3.fromRGB(48,  48,  88),
-        scroll    = Color3.fromRGB(58,  58,  105),
-        catBg     = Color3.fromRGB(10,  10,  18),
-        catText   = Color3.fromRGB(70,  70,  120),
+        bg        = Color3.fromRGB(8,   10,  20),
+        header    = Color3.fromRGB(14,  18,  38),
+        tabBar    = Color3.fromRGB(10,  12,  26),
+        tabOn     = Color3.fromRGB(20,  24,  50),
+        tabOff    = Color3.fromRGB(10,  12,  26),
+        row       = Color3.fromRGB(12,  14,  30),
+        rowHov    = Color3.fromRGB(20,  24,  48),
+        border    = Color3.fromRGB(38,  44,  88),
+        sep       = Color3.fromRGB(24,  28,  58),
+        text      = Color3.fromRGB(200, 205, 240),
+        dim       = Color3.fromRGB(78,  84,  138),
+        on        = Color3.fromRGB(64,  190, 255),
+        onBg      = Color3.fromRGB(12,  48,  90),
+        off       = Color3.fromRGB(200, 54,  100),
+        offBg     = Color3.fromRGB(56,  12,  32),
+        accent    = Color3.fromRGB(130, 90,  255),  -- фиолет
+        input     = Color3.fromRGB(6,   8,   18),
+        inputBord = Color3.fromRGB(40,  46,  92),
+        scroll    = Color3.fromRGB(52,  58,  110),
+        catBg     = Color3.fromRGB(6,   8,   16),
+        catText   = Color3.fromRGB(58,  64,  120),
+        btnPrim   = Color3.fromRGB(64,  120, 220),
+        btnWarn   = Color3.fromRGB(130, 90,  255),
+        btnDang   = Color3.fromRGB(200, 54,  100),
     },
-    Green = {
-        bg        = Color3.fromRGB(13,  22,  13),
-        header    = Color3.fromRGB(20,  38,  20),
-        tabBar    = Color3.fromRGB(15,  28,  15),
-        tabOn     = Color3.fromRGB(24,  44,  24),
-        tabOff    = Color3.fromRGB(15,  28,  15),
-        row       = Color3.fromRGB(17,  30,  17),
-        rowHov    = Color3.fromRGB(24,  42,  24),
-        border    = Color3.fromRGB(38,  72,  38),
-        sep       = Color3.fromRGB(28,  52,  28),
-        text      = Color3.fromRGB(175, 230, 175),
-        dim       = Color3.fromRGB(75,  130, 75),
-        on        = Color3.fromRGB(80,  225, 80),
-        onBg      = Color3.fromRGB(18,  72,  18),
-        off       = Color3.fromRGB(200, 68,  48),
-        offBg     = Color3.fromRGB(62,  20,  14),
-        accent    = Color3.fromRGB(95,  255, 115),
-        input     = Color3.fromRGB(10,  18,  10),
-        inputBord = Color3.fromRGB(38,  68,  38),
-        scroll    = Color3.fromRGB(48,  98,  48),
-        catBg     = Color3.fromRGB(10,  18,  10),
-        catText   = Color3.fromRGB(55,  108, 55),
+
+    -- ── Forest (глубокий зелёный, приглушённые тона) ──
+    Forest = {
+        bg        = Color3.fromRGB(10,  18,  12),
+        header    = Color3.fromRGB(16,  32,  18),
+        tabBar    = Color3.fromRGB(12,  22,  14),
+        tabOn     = Color3.fromRGB(20,  38,  22),
+        tabOff    = Color3.fromRGB(12,  22,  14),
+        row       = Color3.fromRGB(13,  24,  15),
+        rowHov    = Color3.fromRGB(20,  36,  22),
+        border    = Color3.fromRGB(32,  64,  36),
+        sep       = Color3.fromRGB(22,  44,  26),
+        text      = Color3.fromRGB(168, 228, 175),
+        dim       = Color3.fromRGB(65,  115, 72),
+        on        = Color3.fromRGB(70,  220, 88),
+        onBg      = Color3.fromRGB(14,  66,  18),
+        off       = Color3.fromRGB(210, 62,  44),
+        offBg     = Color3.fromRGB(60,  16,  10),
+        accent    = Color3.fromRGB(88,  248, 110),
+        input     = Color3.fromRGB(8,   14,  10),
+        inputBord = Color3.fromRGB(30,  58,  34),
+        scroll    = Color3.fromRGB(40,  88,  46),
+        catBg     = Color3.fromRGB(8,   14,  10),
+        catText   = Color3.fromRGB(48,  100, 54),
+        btnPrim   = Color3.fromRGB(40,  160, 58),
+        btnWarn   = Color3.fromRGB(180, 155, 30),
+        btnDang   = Color3.fromRGB(185, 48,  32),
+    },
+
+    -- ── Crimson (тёмно-красная тема) ──
+    Crimson = {
+        bg        = Color3.fromRGB(18,  8,   8),
+        header    = Color3.fromRGB(36,  12,  12),
+        tabBar    = Color3.fromRGB(26,  10,  10),
+        tabOn     = Color3.fromRGB(46,  16,  16),
+        tabOff    = Color3.fromRGB(26,  10,  10),
+        row       = Color3.fromRGB(28,  10,  10),
+        rowHov    = Color3.fromRGB(46,  16,  16),
+        border    = Color3.fromRGB(88,  28,  28),
+        sep       = Color3.fromRGB(58,  18,  18),
+        text      = Color3.fromRGB(240, 205, 205),
+        dim       = Color3.fromRGB(140, 78,  78),
+        on        = Color3.fromRGB(220, 80,  80),
+        onBg      = Color3.fromRGB(68,  14,  14),
+        off       = Color3.fromRGB(100, 100, 100),
+        offBg     = Color3.fromRGB(30,  26,  26),
+        accent    = Color3.fromRGB(255, 100, 100),
+        input     = Color3.fromRGB(14,  6,   6),
+        inputBord = Color3.fromRGB(78,  24,  24),
+        scroll    = Color3.fromRGB(100, 30,  30),
+        catBg     = Color3.fromRGB(12,  6,   6),
+        catText   = Color3.fromRGB(110, 40,  40),
+        btnPrim   = Color3.fromRGB(180, 40,  40),
+        btnWarn   = Color3.fromRGB(200, 120, 30),
+        btnDang   = Color3.fromRGB(255, 60,  60),
+    },
+
+    -- ── Slate (серо-стальная, нейтральная) ──
+    Slate = {
+        bg        = Color3.fromRGB(30,  34,  40),
+        header    = Color3.fromRGB(44,  50,  60),
+        tabBar    = Color3.fromRGB(36,  40,  48),
+        tabOn     = Color3.fromRGB(52,  58,  70),
+        tabOff    = Color3.fromRGB(36,  40,  48),
+        row       = Color3.fromRGB(38,  42,  50),
+        rowHov    = Color3.fromRGB(52,  58,  68),
+        border    = Color3.fromRGB(68,  76,  90),
+        sep       = Color3.fromRGB(52,  58,  68),
+        text      = Color3.fromRGB(210, 215, 225),
+        dim       = Color3.fromRGB(110, 118, 135),
+        on        = Color3.fromRGB(80,  190, 155),
+        onBg      = Color3.fromRGB(18,  60,  48),
+        off       = Color3.fromRGB(190, 80,  80),
+        offBg     = Color3.fromRGB(58,  18,  18),
+        accent    = Color3.fromRGB(100, 195, 240),
+        input     = Color3.fromRGB(24,  28,  34),
+        inputBord = Color3.fromRGB(62,  70,  84),
+        scroll    = Color3.fromRGB(78,  88,  105),
+        catBg     = Color3.fromRGB(24,  28,  34),
+        catText   = Color3.fromRGB(88,  96,  115),
+        btnPrim   = Color3.fromRGB(60,  130, 200),
+        btnWarn   = Color3.fromRGB(200, 155, 30),
+        btnDang   = Color3.fromRGB(185, 58,  58),
     },
 }
 
--- активная тема — копия, можно менять отдельные ключи
+-- активная тема
 local C = {}
 for k, v in pairs(FlatLib.Themes.Dark) do C[k] = v end
 
@@ -120,8 +199,7 @@ local FB = Enum.Font.SourceSansBold
 local FR = Enum.Font.SourceSans
 
 -- ══════════════════════════════════════════════════
---  РЕЕСТР — список { inst, paintFn }
---  paintFn(inst) вызывается при смене темы/масштаба
+--  РЕЕСТР
 -- ══════════════════════════════════════════════════
 
 local registry = {}
@@ -181,7 +259,6 @@ local function new(class, props, parent)
     return o
 end
 
--- нижняя граница строки
 local function mkBorder(parent)
     local b = new("Frame",{
         Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1),
@@ -191,7 +268,6 @@ local function mkBorder(parent)
     return b
 end
 
--- hover для строки
 local function addHover(frame)
     frame.InputBegan:Connect(function(i)
         if i.UserInputType==Enum.UserInputType.MouseMovement then
@@ -203,6 +279,32 @@ local function addHover(frame)
             frame.BackgroundColor3=C.row
         end
     end)
+end
+
+-- мини-кнопка с цветом
+local function mkSmallBtn(parent, text, bgColor, textColor, x, w, h, callback)
+    w = w or 42; h = h or 17
+    local btn = new("TextButton",{
+        Size=UDim2.new(0,px(w),0,px(h)),
+        Position=UDim2.new(1,-px(x),0.5,-px(math.floor(h/2))),
+        BackgroundColor3=bgColor, BorderSizePixel=0,
+        Text=text, TextColor3=textColor or Color3.fromRGB(255,255,255),
+        TextSize=px(10), Font=FB, AutoButtonColor=false, ZIndex=4,
+    }, parent)
+    reg(btn, function(o)
+        o.TextSize=px(10)
+        o.Size=UDim2.new(0,px(w),0,px(h))
+        o.Position=UDim2.new(1,-px(x),0.5,-px(math.floor(h/2)))
+    end)
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(
+            math.min(bgColor.R*255+20,255)/255,
+            math.min(bgColor.G*255+20,255)/255,
+            math.min(bgColor.B*255+20,255)/255)
+    end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3=bgColor end)
+    btn.MouseButton1Click:Connect(function() if callback then callback() end end)
+    return btn
 end
 
 -- ══════════════════════════════════════════════════
@@ -217,7 +319,6 @@ end
 
 function Tab:_o() self._ord+=1; return self._ord end
 
--- базовая строка высотой h
 function Tab:_row(h)
     h = h or 28
     local row = new("Frame",{
@@ -230,9 +331,8 @@ function Tab:_row(h)
     return row
 end
 
--- квадрат-индикатор
 local function dot(parent, colorFn, ox, oy)
-    ox = ox or 8; oy = oy or nil  -- oy=nil → центр по Y
+    ox = ox or 8
     local posY = oy and UDim2.new(0,px(ox),0,px(oy)) or UDim2.new(0,px(ox),0.5,-px(3))
     local d = new("Frame",{
         Size=UDim2.new(0,px(6),0,px(6)), Position=posY,
@@ -542,6 +642,262 @@ function Tab:Separator()
 end
 
 -- ══════════════════════════════════════════════════
+--  PLAYER LIST COMPONENT
+--  Tab:PlayerList(options)
+--
+--  options = {
+--    showTeleport = true,     -- кнопка телепортации к игроку
+--    showSpectate = true,     -- кнопка слежки (spectate)
+--    showFling    = false,    -- кнопка fling (опционально)
+--    onTeleport   = function(player) end,
+--    onSpectate   = function(player) end,
+--    onFling      = function(player) end,
+--  }
+-- ══════════════════════════════════════════════════
+
+function Tab:PlayerList(options)
+    options = options or {}
+    local showTP  = options.showTeleport ~= false
+    local showSP  = options.showSpectate ~= false
+    local showFL  = options.showFling    == true
+
+    -- Заголовок
+    self:Label("PLAYERS")
+
+    -- Кол-во видимых кнопок → подбираем ширину
+    local btnW = 38
+    local btnGap = 4
+    local numBtns = (showTP and 1 or 0) + (showSP and 1 or 0) + (showFL and 1 or 0)
+    local totalBtnW = numBtns * (btnW + btnGap)
+
+    -- Контейнер для строк игроков
+    local container = new("Frame",{
+        LayoutOrder=self:_o(),
+        Size=UDim2.new(1,0,0,0),
+        AutomaticSize=Enum.AutomaticSize.Y,
+        BackgroundTransparency=1,
+        BorderSizePixel=0,
+    }, self._s)
+    new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,0)},container)
+    reg(container, function() end) -- placeholder
+
+    local playerRows = {}  -- name → row frame
+    local spectating = nil -- текущий spectate target
+
+    -- ── Внутренние функции действий ─────────────
+
+    local function doTeleport(target)
+        if options.onTeleport then
+            options.onTeleport(target)
+            return
+        end
+        -- дефолт: телепортируем своего персонажа к target
+        local chr = lp.Character
+        local tgt = target.Character
+        if chr and tgt then
+            local hrp = chr:FindFirstChild("HumanoidRootPart")
+            local tHrp = tgt:FindFirstChild("HumanoidRootPart")
+            if hrp and tHrp then
+                hrp.CFrame = tHrp.CFrame + Vector3.new(0, 3, 0)
+            end
+        end
+    end
+
+    local function doSpectate(target)
+        if options.onSpectate then
+            options.onSpectate(target)
+            return
+        end
+        -- дефолт: переключаем камеру на target
+        local cam = workspace.CurrentCamera
+        if spectating == target then
+            -- отключаем слежку
+            cam.CameraSubject = lp.Character and lp.Character:FindFirstChild("Humanoid")
+            cam.CameraType    = Enum.CameraType.Custom
+            spectating        = nil
+        else
+            local tgt = target.Character
+            if tgt then
+                local hum = tgt:FindFirstChild("Humanoid")
+                if hum then
+                    cam.CameraSubject = hum
+                    cam.CameraType    = Enum.CameraType.Follow
+                    spectating        = target
+                end
+            end
+        end
+    end
+
+    local function doFling(target)
+        if options.onFling then
+            options.onFling(target)
+            return
+        end
+        -- дефолт: применяем импульс к HumanoidRootPart цели
+        local tgt = target.Character
+        if tgt then
+            local hrp = tgt:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local bv = Instance.new("BodyVelocity")
+                bv.Velocity = Vector3.new(
+                    math.random(-200,200),
+                    math.random(200,400),
+                    math.random(-200,200))
+                bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+                bv.P = 1e9
+                bv.Parent = hrp
+                game:GetService("Debris"):AddItem(bv, 0.15)
+            end
+        end
+    end
+
+    -- ── Создать строку для игрока ────────────────
+
+    local function buildRow(player)
+        if player == lp then return end  -- себя не показываем
+        if playerRows[player.Name] then return end
+
+        local rowH = 28
+        local row = new("Frame",{
+            LayoutOrder = 1,
+            Size = UDim2.new(1,0,0,px(rowH)),
+            BackgroundColor3 = C.row,
+            BorderSizePixel = 0,
+        }, container)
+        mkBorder(row)
+        reg(row, function(o) o.BackgroundColor3=C.row; o.Size=UDim2.new(1,0,0,px(rowH)) end)
+        addHover(row)
+
+        -- цветной кружок (онлайн индикатор)
+        local ind = new("Frame",{
+            Size=UDim2.new(0,px(5),0,px(5)),
+            Position=UDim2.new(0,px(8),0.5,-px(2)),
+            BackgroundColor3=C.on,
+            BorderSizePixel=0,
+        }, row)
+        reg(ind, function(o) o.BackgroundColor3=C.on; o.Size=UDim2.new(0,px(5),0,px(5)); o.Position=UDim2.new(0,px(8),0.5,-px(2)) end)
+
+        -- имя игрока
+        local nameLbl = new("TextLabel",{
+            Size=UDim2.new(1,-px(totalBtnW+24),1,0),
+            Position=UDim2.new(0,px(20),0,0),
+            BackgroundTransparency=1,
+            Text=player.DisplayName ~= player.Name
+                and (player.DisplayName.." ("..player.Name..")")
+                or player.Name,
+            TextColor3=C.text, TextSize=px(12), Font=FR,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            TextTruncate=Enum.TextTruncate.AtEnd,
+        }, row)
+        reg(nameLbl, function(o)
+            o.TextColor3=C.text; o.TextSize=px(12)
+            o.Size=UDim2.new(1,-px(totalBtnW+24),1,0)
+            o.Position=UDim2.new(0,px(20),0,0)
+        end)
+
+        -- кнопки справа налево
+        local curX = 6
+
+        if showFL then
+            local fBtn = mkSmallBtn(row, "FLG",
+                C.btnDang, Color3.fromRGB(255,220,220),
+                curX, btnW, 16,
+                function() doFling(player) end)
+            reg(fBtn, function(o)
+                o.BackgroundColor3=C.btnDang
+            end)
+            curX = curX + btnW + btnGap
+        end
+
+        if showSP then
+            local sBtn = mkSmallBtn(row, "SPY",
+                C.btnWarn, Color3.fromRGB(255,245,200),
+                curX, btnW, 16,
+                function() doSpectate(player) end)
+            reg(sBtn, function(o)
+                o.BackgroundColor3=C.btnWarn
+            end)
+            curX = curX + btnW + btnGap
+        end
+
+        if showTP then
+            local tBtn = mkSmallBtn(row, "TP",
+                C.btnPrim, Color3.fromRGB(200,225,255),
+                curX, btnW, 16,
+                function() doTeleport(player) end)
+            reg(tBtn, function(o)
+                o.BackgroundColor3=C.btnPrim
+            end)
+        end
+
+        playerRows[player.Name] = row
+    end
+
+    -- ── Удалить строку игрока ────────────────────
+
+    local function removeRow(player)
+        -- если spectating этого игрока — сбросить
+        if spectating == player then
+            local cam = workspace.CurrentCamera
+            cam.CameraSubject = lp.Character and lp.Character:FindFirstChild("Humanoid")
+            cam.CameraType    = Enum.CameraType.Custom
+            spectating = nil
+        end
+        local row = playerRows[player.Name]
+        if row then
+            row:Destroy()
+            playerRows[player.Name] = nil
+        end
+    end
+
+    -- ── Наполнить список текущими игроками ───────
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        buildRow(p)
+    end
+
+    -- ── Слушаем события Players ──────────────────
+
+    Players.PlayerAdded:Connect(buildRow)
+    Players.PlayerRemoving:Connect(removeRow)
+
+    -- ── Кнопка "Refresh" ─────────────────────────
+
+    local refRow = new("Frame",{
+        LayoutOrder=self:_o(),
+        Size=UDim2.new(1,0,0,px(22)),
+        BackgroundColor3=C.catBg,
+        BorderSizePixel=0,
+    }, self._s)
+    local refBtn = new("TextButton",{
+        Size=UDim2.new(1,-px(16),0,px(14)),
+        Position=UDim2.new(0,px(8),0.5,-px(7)),
+        BackgroundColor3=C.tabBar,
+        BorderColor3=C.border, BorderSizePixel=1,
+        Text="↺  Refresh list",
+        TextColor3=C.dim, TextSize=px(11), Font=FB,
+        AutoButtonColor=false,
+    }, refRow)
+    reg(refRow, function(o) o.BackgroundColor3=C.catBg; o.Size=UDim2.new(1,0,0,px(22)) end)
+    reg(refBtn, function(o) o.BackgroundColor3=C.tabBar; o.BorderColor3=C.border; o.TextColor3=C.dim; o.TextSize=px(11) end)
+    refBtn.MouseEnter:Connect(function() refBtn.BackgroundColor3=C.rowHov end)
+    refBtn.MouseLeave:Connect(function() refBtn.BackgroundColor3=C.tabBar end)
+    refBtn.MouseButton1Click:Connect(function()
+        -- удаляем устаревшие строки
+        for name, row in pairs(playerRows) do
+            if not Players:FindFirstChild(name) then
+                row:Destroy()
+                playerRows[name] = nil
+            end
+        end
+        -- добавляем новых
+        for _, p in ipairs(Players:GetPlayers()) do
+            buildRow(p)
+        end
+    end)
+end
+
+-- ══════════════════════════════════════════════════
 --  WINDOW CLASS
 -- ══════════════════════════════════════════════════
 
@@ -653,12 +1009,10 @@ function Window:Tab(name)
     self._tabs[name]   = { btn=btn, ind=ind, scroll=scroll }
     self._tabList[idx] = name
 
-    -- обновляем ширину всех кнопок и их paint
     local total = #self._tabList
     for _, n in ipairs(self._tabList) do
         local d = self._tabs[n]
         d.btn.Size = UDim2.new(1/total,0,1,0)
-        -- захватываем n для paint
         local cn = n
         local cself = self
         reg(d.btn, function(o)
