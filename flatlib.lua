@@ -281,8 +281,8 @@ end
 
 local Tab = {}; Tab.__index = Tab
 
-function Tab._new(scroll)
-    return setmetatable({_s=scroll, _ord=0}, Tab)
+function Tab._new(scroll, sg)
+    return setmetatable({_s=scroll, _ord=0, _sg=sg}, Tab)
 end
 
 function Tab:_o() self._ord+=1; return self._ord end
@@ -470,7 +470,9 @@ end
 -- ── TextBox ──────────────────────────────────────
 
 function Tab:TextBox(label, placeholder, callback)
-    local row = self:_row(28)
+    -- строка чуть выше чтобы поле было нормальной высоты
+    local ROW_H = 36
+    local row = self:_row(ROW_H)
     dot(row, function() return C.dim end)
 
     local lbl = new("TextLabel",{
@@ -481,8 +483,9 @@ function Tab:TextBox(label, placeholder, callback)
     }, row)
     reg(lbl, function(o) o.TextColor3=C.text; o.TextSize=px(13); o.Font=FR end)
 
+    local BOX_H = px(22)
     local box = new("TextBox",{
-        Size=UDim2.new(0.5,-px(6),0,px(17)), Position=UDim2.new(0.5,0,0.5,-px(8)),
+        Size=UDim2.new(0.5,-px(6),0,BOX_H), Position=UDim2.new(0.5,0,0.5,-BOX_H/2),
         BackgroundColor3=C.input, BorderColor3=C.inputBord, BorderSizePixel=1,
         PlaceholderText=placeholder or "", PlaceholderColor3=C.dim,
         Text="", TextColor3=C.text, TextSize=px(12), Font=FR,
@@ -491,6 +494,7 @@ function Tab:TextBox(label, placeholder, callback)
     reg(box, function(o)
         o.BackgroundColor3=C.input; o.BorderColor3=C.inputBord
         o.PlaceholderColor3=C.dim; o.TextColor3=C.text; o.TextSize=px(12); o.Font=FR
+        o.Size=UDim2.new(0.5,-px(6),0,px(22)); o.Position=UDim2.new(0.5,0,0.5,-px(11))
     end)
 
     box.FocusLost:Connect(function() if callback then callback(box.Text) end end)
@@ -501,6 +505,8 @@ function Tab:TextBox(label, placeholder, callback)
 end
 
 -- ── Dropdown ─────────────────────────────────────
+-- Выпадашка рендерится в ScreenGui поверх всего,
+-- позиция вычисляется через AbsolutePosition кнопки.
 
 function Tab:Dropdown(label, options, default, callback)
     local row = new("Frame",{
@@ -521,7 +527,8 @@ function Tab:Dropdown(label, options, default, callback)
     }, row)
     reg(lbl, function(o) o.TextColor3=C.text; o.TextSize=px(13); o.Font=FR end)
 
-    local sel=default or options[1] or ""; local open=false
+    local sel = default or options[1] or ""
+    local open = false
 
     local selBtn = new("TextButton",{
         Size=UDim2.new(0.5,-px(6),0,px(17)), Position=UDim2.new(0.5,0,0.5,-px(8)),
@@ -534,22 +541,40 @@ function Tab:Dropdown(label, options, default, callback)
         o.TextSize=px(12); o.Font=FR
     end)
 
+    -- выпадашка в ScreenGui — не обрезается скроллом
+    local ITEM_H = px(20)
+    local DROP_W = 0  -- будет вычислен по ширине selBtn
     local drop = new("Frame",{
-        Size=UDim2.new(0.5,-px(6),0,#options*px(20)), Position=UDim2.new(0.5,0,1,1),
+        Size=UDim2.new(0, 100, 0, #options * ITEM_H),
+        Position=UDim2.new(0, 0, 0, 0),
         BackgroundColor3=C.input, BorderColor3=C.border, BorderSizePixel=1,
-        Visible=false, ZIndex=20, ClipsDescendants=true,
-    }, row)
+        Visible=false, ZIndex=100, ClipsDescendants=true,
+    }, self._sg)  -- <-- в ScreenGui, не в row
     new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,0)},drop)
-    reg(drop, function(o) o.BackgroundColor3=C.input; o.BorderColor3=C.border; o.Size=UDim2.new(0.5,-px(6),0,#options*px(20)) end)
+    reg(drop, function(o)
+        o.BackgroundColor3=C.input; o.BorderColor3=C.border
+    end)
 
-    for i,opt in ipairs(options) do
+    local function repositionDrop()
+        -- обновляем размер и позицию по абсолютным координатам кнопки
+        local ap  = selBtn.AbsolutePosition
+        local as  = selBtn.AbsoluteSize
+        local h   = #options * ITEM_H
+        drop.Size     = UDim2.new(0, as.X, 0, h)
+        drop.Position = UDim2.new(0, ap.X, 0, ap.Y + as.Y + 1)
+    end
+
+    for i, opt in ipairs(options) do
         local ob = new("TextButton",{
-            LayoutOrder=i, Size=UDim2.new(1,0,0,px(20)),
+            LayoutOrder=i, Size=UDim2.new(1,0,0,ITEM_H),
             BackgroundColor3=C.input, BorderSizePixel=0,
             Text=opt, TextColor3=C.dim,
-            TextSize=px(12), Font=FR, AutoButtonColor=false, ZIndex=20,
+            TextSize=px(12), Font=FR, AutoButtonColor=false, ZIndex=100,
         }, drop)
-        local sp = new("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=C.sep,BorderSizePixel=0,ZIndex=20},ob)
+        local sp = new("Frame",{
+            Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1),
+            BackgroundColor3=C.sep, BorderSizePixel=0, ZIndex=101,
+        }, ob)
         reg(ob, function(o) o.BackgroundColor3=C.input; o.TextColor3=C.dim; o.TextSize=px(12); o.Font=FR end)
         reg(sp, function(o) o.BackgroundColor3=C.sep end)
         ob.MouseEnter:Connect(function() ob.BackgroundColor3=C.rowHov end)
@@ -561,10 +586,22 @@ function Tab:Dropdown(label, options, default, callback)
         end)
     end
 
-    selBtn.MouseButton1Click:Connect(function() open=not open; drop.Visible=open end)
+    selBtn.MouseButton1Click:Connect(function()
+        open = not open
+        if open then
+            repositionDrop()
+            drop.Visible = true
+        else
+            drop.Visible = false
+        end
+    end)
+
+    -- закрыть при клике в другом месте
     UserInputService.InputBegan:Connect(function(i)
         if open and i.UserInputType==Enum.UserInputType.MouseButton1 then
-            task.wait(); drop.Visible=false; open=false
+            -- небольшой delay чтобы успел сработать клик по опции
+            task.wait(0.05)
+            drop.Visible=false; open=false
         end
     end)
 
@@ -1153,7 +1190,7 @@ function Window:Tab(name)
     btn.MouseButton1Click:Connect(function() self:_activate(name) end)
     if idx==1 then self:_activate(name) end
 
-    return Tab._new(scroll)
+    return Tab._new(scroll, self._sg)
 end
 
 function Window:_activate(name)
