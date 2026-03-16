@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════════
---  FlatLib v4.3  |  2018 flat style  |  Roblox Executor UI Lib
+--  FlatLib v4.2  |  2018 flat style  |  Roblox Executor UI Lib
 --  Оригинальная база + расширенная кастомизация
 -- ══════════════════════════════════════════════════════════════
 
@@ -523,8 +523,11 @@ function Tab:TextBox(label, placeholder, callback)
 end
 
 -- ── Dropdown ─────────────────────────────────────
--- Выпадашка рендерится в ScreenGui поверх всего,
--- позиция вычисляется через AbsolutePosition кнопки.
+-- Выпадашка рендерится в ScreenGui поверх всего.
+-- Глобальный реестр открытых дропдаунов —
+-- открытие одного закрывает все остальные.
+
+local _openDropdowns = {}  -- список функций closeFn для всех дропдаунов
 
 function Tab:Dropdown(label, options, default, callback)
     local row = new("Frame",{
@@ -545,7 +548,7 @@ function Tab:Dropdown(label, options, default, callback)
     }, row)
     reg(lbl, function(o) o.TextColor3=C.text; o.TextSize=px(13); o.Font=FR end)
 
-    local sel = default or options[1] or ""
+    local sel  = default or options[1] or ""
     local open = false
 
     local selBtn = new("TextButton",{
@@ -559,73 +562,101 @@ function Tab:Dropdown(label, options, default, callback)
         o.TextSize=px(12); o.Font=FR
     end)
 
-    -- выпадашка в ScreenGui — не обрезается скроллом
     local ITEM_H = px(20)
-    local DROP_W = 0  -- будет вычислен по ширине selBtn
+
+    -- выпадашка — в ScreenGui, не в row, чтобы не обрезалась скроллом
     local drop = new("Frame",{
         Size=UDim2.new(0, 100, 0, #options * ITEM_H),
         Position=UDim2.new(0, 0, 0, 0),
         BackgroundColor3=C.input, BorderColor3=C.border, BorderSizePixel=1,
-        Visible=false, ZIndex=100, ClipsDescendants=true,
-    }, self._sg)  -- <-- в ScreenGui, не в row
-    new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,0)},drop)
-    reg(drop, function(o)
-        o.BackgroundColor3=C.input; o.BorderColor3=C.border
-    end)
+        Visible=false, ZIndex=200, ClipsDescendants=true,
+    }, self._sg)
+    new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,0)}, drop)
+    reg(drop, function(o) o.BackgroundColor3=C.input; o.BorderColor3=C.border end)
 
-    local function repositionDrop()
-        -- обновляем размер и позицию по абсолютным координатам кнопки
-        local ap  = selBtn.AbsolutePosition
-        local as  = selBtn.AbsoluteSize
-        local h   = #options * ITEM_H
-        drop.Size     = UDim2.new(0, as.X, 0, h)
-        drop.Position = UDim2.new(0, ap.X, 0, ap.Y + as.Y + 1)
+    local function closeDrop()
+        open = false
+        drop.Visible = false
     end
 
+    local function openDrop()
+        -- закрыть все другие открытые дропдауны
+        for _, fn in ipairs(_openDropdowns) do pcall(fn) end
+
+        -- позиционируем точно под кнопкой
+        local ap = selBtn.AbsolutePosition
+        local as = selBtn.AbsoluteSize
+        drop.Size     = UDim2.new(0, as.X, 0, #options * ITEM_H)
+        drop.Position = UDim2.new(0, ap.X, 0, ap.Y + as.Y + 1)
+        drop.Visible  = true
+        open = true
+    end
+
+    -- регистрируем функцию закрытия в глобальном списке
+    table.insert(_openDropdowns, closeDrop)
+
+    -- опции
     for i, opt in ipairs(options) do
         local ob = new("TextButton",{
             LayoutOrder=i, Size=UDim2.new(1,0,0,ITEM_H),
             BackgroundColor3=C.input, BorderSizePixel=0,
             Text=opt, TextColor3=C.dim,
-            TextSize=px(12), Font=FR, AutoButtonColor=false, ZIndex=100,
+            TextSize=px(12), Font=FR, AutoButtonColor=false, ZIndex=200,
         }, drop)
         local sp = new("Frame",{
             Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1),
-            BackgroundColor3=C.sep, BorderSizePixel=0, ZIndex=101,
+            BackgroundColor3=C.sep, BorderSizePixel=0, ZIndex=201,
         }, ob)
         reg(ob, function(o) o.BackgroundColor3=C.input; o.TextColor3=C.dim; o.TextSize=px(12); o.Font=FR end)
         reg(sp, function(o) o.BackgroundColor3=C.sep end)
+
         ob.MouseEnter:Connect(function() ob.BackgroundColor3=C.rowHov end)
         ob.MouseLeave:Connect(function() ob.BackgroundColor3=C.input  end)
+
         ob.MouseButton1Click:Connect(function()
-            sel=opt; selBtn.Text=opt.." v"
-            drop.Visible=false; open=false
-            if callback then callback(sel) end
+            -- сначала запоминаем выбор и вызываем колбэк
+            sel = opt
+            selBtn.Text = opt .. " v"
+            closeDrop()
+            if callback then
+                task.spawn(callback, sel)  -- task.spawn чтобы не блокировать UI
+            end
         end)
     end
 
+    -- открыть/закрыть по клику на кнопку
     selBtn.MouseButton1Click:Connect(function()
-        open = not open
         if open then
-            repositionDrop()
-            drop.Visible = true
+            closeDrop()
         else
-            drop.Visible = false
+            openDrop()
         end
     end)
 
-    -- закрыть при клике в другом месте
+    -- закрыть если кликнули вне дропдауна
+    -- используем один глобальный коннект через UserInputService
     UserInputService.InputBegan:Connect(function(i)
-        if open and i.UserInputType==Enum.UserInputType.MouseButton1 then
-            -- небольшой delay чтобы успел сработать клик по опции
-            task.wait(0.05)
-            drop.Visible=false; open=false
+        if not open then return end
+        if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+        -- проверяем — попал ли клик в дропдаун или в selBtn
+        local mp = UserInputService:GetMouseLocation()
+        local dp = drop.AbsolutePosition
+        local ds = drop.AbsoluteSize
+        local sp2 = selBtn.AbsolutePosition
+        local ss  = selBtn.AbsoluteSize
+        local inDrop   = mp.X>=dp.X and mp.X<=dp.X+ds.X and mp.Y>=dp.Y and mp.Y<=dp.Y+ds.Y
+        local inSelBtn = mp.X>=sp2.X and mp.X<=sp2.X+ss.X and mp.Y>=sp2.Y and mp.Y<=sp2.Y+ss.Y
+        if not inDrop and not inSelBtn then
+            closeDrop()
         end
     end)
 
     return {
-        Get=function() return sel end,
-        Set=function(_,v) sel=v; selBtn.Text=v.." v" end,
+        Get = function() return sel end,
+        Set = function(_, v)
+            sel = v
+            selBtn.Text = v .. " v"
+        end,
     }
 end
 
